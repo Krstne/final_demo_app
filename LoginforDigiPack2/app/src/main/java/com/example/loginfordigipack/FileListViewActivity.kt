@@ -40,8 +40,8 @@ import java.io.File
 
 import java.io.InputStream
 import android.provider.DocumentsContract
-
-
+import kotlinx.android.synthetic.main.activity_details.*
+import kotlinx.android.synthetic.main.activity_file_list_view.clouds
 
 
 const val PICK_PDF_FILE = 2
@@ -50,6 +50,8 @@ class FileListViewActivity : AppCompatActivity() {
 
     var url : String = ""
     lateinit var email : String
+    // Call the network detector tool
+    private val networkMonitor = networkDetectorTool(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,19 +62,18 @@ class FileListViewActivity : AppCompatActivity() {
         var queue = RequestQueueSingleton.getInstance(this.applicationContext)
         var context: Context = this
 
-
         var googleFirstName = intent.getBundleExtra("gsoData")?.getString("google_first_name")
         var googleId = intent.getBundleExtra("gsoData")?.getString("google_id")
         email = intent.getBundleExtra("gsoData")?.getString("google_email").toString()
 
-
         read_json(filenames, fileids)
         write_to_ui_and_listen(filenames, fileids, queue)
+
         //on refresh:
         //refreshList(queue, email, googleFirstName, googleId)
         //read_json(filenames, fileids)
 
-        // Adding the button connection
+        // Looking for the file button connection
         val openFileButton = findViewById<Button>(R.id.openFileButton)
 
         // Set file button onclicklistener
@@ -104,8 +105,50 @@ class FileListViewActivity : AppCompatActivity() {
             //once they pick a file, call onActivityResult with PICK_PDF_FILE code
             startActivityForResult(intent, PICK_PDF_FILE)
         }
-    }
 
+        // Calls the network detector class
+        networkMonitor.result = { isAvailable, type ->
+            runOnUiThread {
+                when (isAvailable) {
+                    true -> {
+                        when (type) {
+                            ConnectionType.Wifi -> {
+                                clouds.setImageResource(R.drawable.noclouds)
+                            }
+                            ConnectionType.Cellular -> {
+                                clouds.setImageResource(R.drawable.noclouds)
+                            }
+                            else -> { }
+                        }
+                    }
+                    false -> {
+                        clouds.setImageResource(R.drawable.networkclouds)
+                    }
+                }
+            }
+        }
+
+        // Checks if the requestCode is the same, if so then continue the sign in process
+        fun onActivityResult(requestCode: Int, resultCode: Int, resultData: Intent?) {
+            super.onActivityResult(requestCode, resultCode, resultData)
+
+            //after the user picks a pdf file
+            if (requestCode == PICK_PDF_FILE){
+                var uri: Uri? = null
+
+                //if they successfully picked a file
+                if (resultData != null) {
+                    //call an intent to open the file up; asks user to select an application with which to view pdf
+                    uri = resultData.data
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.setDataAndType(uri, "application/pdf")
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_ACTIVITY_NO_HISTORY)
+                    startActivity(intent)
+                }
+            }
+        }
+    }
 
     // Read the json file and the display it on the activity layout
     fun read_json(filenames: ArrayList<String>, fileids: ArrayList<String>){
@@ -187,16 +230,15 @@ class FileListViewActivity : AppCompatActivity() {
                 flag = true
             },
             { err ->
-                //so domething err
+                //so something err
                 flag = false
             }
         )
-
         queue.addToRequestQueue(req)
-
         return flag
     }
 
+    // Refresh the page
     fun refreshList(queue: RequestQueueSingleton, googleEmail: String?, googleFirstName: String?, googleId: String? ){
         val reqMethodCode = Request.Method.GET
         val getFileUrl = getString(R.string.serverUrl).plus("user/").plus(googleEmail)
@@ -218,5 +260,16 @@ class FileListViewActivity : AppCompatActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         FileDownloader().onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        networkMonitor.register()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        networkMonitor.unregister()
     }
 }

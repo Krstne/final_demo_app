@@ -22,11 +22,13 @@ import org.json.JSONObject.*
 
 class DetailsActivity : AppCompatActivity() {
 
+    // Call the network detector tool
+    private val networkMonitor = networkDetectorTool(this)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_details)
 
-        //
         val googleId = intent.getStringExtra("google_id")
         val googleFirstName = intent.getStringExtra("google_first_name")
         val googleLastName = intent.getStringExtra("google_last_name")
@@ -35,8 +37,47 @@ class DetailsActivity : AppCompatActivity() {
         val googleAccessToken = intent.getStringExtra("google_id_token")
 
         google_first_name_textview.text = googleFirstName
-        google_email_textview.text = googleEmail
+        //google_email_textview.text = googleEmail
 
+        // Calls the network detector class
+        networkMonitor.result = { isAvailable, type ->
+            runOnUiThread {
+                when (isAvailable) {
+                    true -> {
+                        when (type) {
+                            ConnectionType.Wifi -> {
+                                clouds.setImageResource(R.drawable.noclouds)
+                                internet_connection.text = "Wifi Connection"
+                                connectToServer()
+                            }
+                            ConnectionType.Cellular -> {
+                                clouds.setImageResource(R.drawable.noclouds)
+                                internet_connection.text = "Cellular Connection"
+                                connectToServer()
+                            }
+                            else -> { }
+                        }
+                    }
+                    false -> {
+                        clouds.setImageResource(R.drawable.networkclouds)
+                        internet_connection.text = "No Connection"
+                        connectToServer()
+                    }
+                }
+            }
+        }
+
+        // Automatically calls connection to the server
+        connectToServer()
+    }
+
+    private fun connectToServer(){
+        val googleId = intent.getStringExtra("google_id")
+        val googleFirstName = intent.getStringExtra("google_first_name")
+        val googleLastName = intent.getStringExtra("google_last_name")
+        val googleEmail = intent.getStringExtra("google_email")
+        val googleProfilePicURL = intent.getStringExtra("google_profile_pic_url")
+        val googleAccessToken = intent.getStringExtra("google_id_token")
 
         val mptv = findViewById<TextView>(R.id.mptext)
         val authurl = "auth/"
@@ -49,40 +90,50 @@ class DetailsActivity : AppCompatActivity() {
 
         val request = JsonObjectRequest(Request.Method.POST, getString(R.string.serverUrl).plus(authurl), jsobtok,
                 { response -> resp = response
-                                    if( resp.get("Result") == "ACK"){
-                                        val success = "Authentication Successful"
-                                        mptv.text = success
+                    if( resp.get("Result") == "ACK"){
+                        val success = "Authentication Successful"
+                        mptv.text = success
 
-                                        val user = Jsuser(googleFirstName, googleEmail, googleId)
-                                        val guser = Gson().toJson(user)
-                                        val jsuserobj = JSONObject(guser)
-                                        var filelistResp = JSONObject("{Result:noACK}")
+                        val user = Jsuser(googleFirstName, googleEmail, googleId)
+                        val guser = Gson().toJson(user)
+                        val jsuserobj = JSONObject(guser)
+                        var filelistResp = JSONObject("{Result:noACK}")
 
-                                        val filelistRequest = JsonObjectRequest(Request.Method.GET, getString(R.string.serverUrl).plus(getlisturl), jsuserobj,
-                                                { flresponse -> filelistResp = flresponse
-                                                                    try{
-                                                                        Log.i(getString(R.string.app_name), "in details act, %s".format(flresponse.toString()))
-                                                                        var flintent = Intent(this, FileListViewActivity::class.java)
-                                                                        flintent.putExtra("fileListJson", flresponse.toString())
-                                                                        flintent.putExtra("gsoData", intent.extras)
-                                                                        val nextbtn = findViewById<Button>(R.id.btn_pick)
-                                                                        nextbtn.setOnClickListener(){
-                                                                            this.startActivity(flintent)
-                                                                        }
-                                                                    }catch(e: JSONException){
-                                                                        Log.e(getString(R.string.app_name), "JSON key error: %s".format(e))
-                                                                    }
-                                                                  },
-                                                { err -> Log.i(getString(R.string.app_name), err.toString())
-                                                    Toast.makeText(applicationContext, err.toString(), Toast.LENGTH_LONG).show()}
-                                                )
-                                        queue.addToRequestQueue(filelistRequest)
+                        val filelistRequest = JsonObjectRequest(Request.Method.GET, getString(R.string.serverUrl).plus(getlisturl), jsuserobj,
+                                { flresponse -> filelistResp = flresponse
+                                    try{
+                                        Log.i(getString(R.string.app_name), "in details act, %s".format(flresponse.toString()))
+                                        var flintent = Intent(this, FileListViewActivity::class.java)
+                                        flintent.putExtra("fileListJson", flresponse.toString())
+                                        flintent.putExtra("gsoData", intent.extras)
+                                        val nextbtn = findViewById<Button>(R.id.btn_pick)
+                                        nextbtn.setOnClickListener(){
+                                            this.startActivity(flintent)
+                                        }
+                                    }catch(e: JSONException){
+                                        Log.e(getString(R.string.app_name), "JSON key error: %s".format(e))
                                     }
-                                  },
+                                },
+                                { err -> Log.i(getString(R.string.app_name), err.toString())
+                                    Toast.makeText(applicationContext, err.toString(), Toast.LENGTH_LONG).show()}
+                        )
+                        queue.addToRequestQueue(filelistRequest)
+                    }
+                },
                 { error ->
                     mptv.text = error.toString() }
-                )
+        )
         queue.addToRequestQueue(request)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkMonitor.register()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        networkMonitor.unregister()
     }
 }
 

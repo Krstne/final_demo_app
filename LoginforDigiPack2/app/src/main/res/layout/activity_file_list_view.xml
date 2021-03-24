@@ -15,18 +15,30 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="123dp"
-        android:layout_marginEnd="133dp"
-        android:layout_marginBottom="54dp"
+        android:layout_marginStart="128dp"
+        android:layout_marginEnd="128dp"
+        android:layout_marginBottom="56dp"
         android:background="@color/nau_gold"
         android:text="Download Folder"
         android:textColor="@color/nau_blue" />
 
     <ListView
-        android:layout_height="550dp"
-        android:layout_width="415dp"
         android:id="@+id/json_info"
-        android:layout_marginTop="54dp"
-        android:layout_alignParentTop="true"/>
+        android:layout_width="415dp"
+        android:layout_height="550dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="24dp" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:id="@+id/clouds"
+        android:layout_height="142dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginBottom="8dp" />
+
 
 </RelativeLayout>
