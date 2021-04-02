@@ -71,6 +71,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     //sign in function for the google sign in button
     private fun signIn() {
         val userSignInIntent = mGoogleSignInClient.signInIntent

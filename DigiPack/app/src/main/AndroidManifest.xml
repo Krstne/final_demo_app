@@ -16,21 +16,30 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.NoActionBar">
+
+        <!--Activity Declarations-->
         <activity android:name=".FileListViewActivity"
                   android:theme="@style/Theme.AppCompat.Light"></activity>
-        <activity android:name=".gClassActivity"></activity>
+        <activity android:name=".gClassActivity"
+                  android:theme="@style/Theme.AppCompat.Light"></activity>
         <activity android:name=".gSearchActivity"
                   android:theme="@style/Theme.AppCompat.Light"></activity>
+        <activity android:name=".courseDetailsActivity"
+            android:theme="@style/Theme.AppCompat.Light"></activity>
 
-        <activity android:name=".DetailsActivity"
-                  android:theme="@style/Theme.AppCompat.Light"></activity>
-
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+                  android:noHistory="true"> <!--Keeps the Google Sign In page off of the activity stack-->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+        <activity
+            android:name=".DetailsActivity"
+            android:theme="@style/Theme.AppCompat.Light">
+        </activity>
+
+
+    </application>
 </manifest>

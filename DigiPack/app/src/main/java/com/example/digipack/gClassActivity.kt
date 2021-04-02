@@ -1,6 +1,8 @@
 package com.example.digipack
 
+import android.content.Intent
 import android.os.Bundle
+import android.text.Html
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -9,7 +11,6 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.gson.annotations.SerializedName
-import kotlinx.android.synthetic.main.activity_file_list_view.*
 import kotlinx.android.synthetic.main.activity_gclass.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -20,10 +21,14 @@ class gClassActivity : AppCompatActivity(){
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_gclass)
 
+        // Change title
+        supportActionBar?.title = Html.fromHtml("<font color='#01345A'>Classroom</font>")
+
         var classnames = ArrayList<String>()
         var classids = ArrayList<String>()
         var announcements = ArrayList<String>()
         var coursework = ArrayList<String>()
+
 
         var gso = intent.getBundleExtra("gsoData")
         var classlist = intent.getStringExtra("classJson")
@@ -61,6 +66,8 @@ class gClassActivity : AppCompatActivity(){
 
             class_names.onItemClickListener = AdapterView.OnItemClickListener{ parent, view, position, id ->
                 //Toast.makeText(applicationContext, "${classnames[position]} selected", Toast.LENGTH_LONG).show()
+                var courseDescriptionPage = Intent(this, courseDetailsActivity::class.java)
+                this.startActivity(courseDescriptionPage)
             }
         }catch(e: IOException) {
             //handle errors eventually

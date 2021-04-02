@@ -36,6 +36,7 @@ class FileListViewActivity : AppCompatActivity() {
 
     var url : String = ""
     lateinit var email : String
+
     // Call the network detector tool
     private val networkMonitor = networkDetectorTool(this)
 
@@ -43,16 +44,10 @@ class FileListViewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_file_list_view)
 
-        // Change title color
+        // Change title
         supportActionBar?.title = Html.fromHtml("<font color='#01345A'>Files</font>")
 
-        // Get the action button
-        val actionBr = supportActionBar
-        if(actionBr != null){
-            actionBr.setDisplayHomeAsUpEnabled(true)
-        }
-
-    var files = ArrayList<DigiJson.DigiFile>()
+        var files = ArrayList<DigiJson.DigiFile>()
         var queue = RequestQueueSingleton.getInstance(this.applicationContext)
         var context: Context = this
 
@@ -195,9 +190,10 @@ class FileListViewActivity : AppCompatActivity() {
             json_info.onItemClickListener = AdapterView.OnItemClickListener{ parent, view, position, id->
                 //position is the index of the list item that corresponds to the button clicked
                 //Toast.makeText(applicationContext, "Type Selected is" + files[position], Toast.LENGTH_LONG).show()
-                url = getString(R.string.serverUrl).plus("download/${files[position].fileid}")
+                url = getString(R.string.serverUrl).plus("download/${files[position].fileName}")
                 //url should not be global in prod
                 //should be created dynamically for the task at hand
+                getfile(queue, files[position].fileid )
                 FileDownloader().getFile(this, url)
             }
         }catch (e: IOException){
@@ -206,7 +202,12 @@ class FileListViewActivity : AppCompatActivity() {
         }
     }
 
-    fun getfile(queue: RequestQueueSingleton, googleEmail: String?, googleFirstName: String?, fileid: String?, googleId: String?): Boolean {
+    fun getfile(queue: RequestQueueSingleton, fileid: String?): Boolean {
+        val gso = intent.getBundleExtra("gsoData")
+        val googleEmail = gso?.getString("google_email")
+        val googleFirstName = gso?.getString("google_first_name")
+        val googleId = gso?.getString("google_id")
+
         val reqMethodCode = Request.Method.GET
         val getFileUrl = getString(R.string.serverUrl).plus("sd/${googleEmail}/${fileid}")
         val request = JSONObject(Gson().toJson(DigiJson.Jsuser(googleFirstName, googleEmail, googleId)))
@@ -253,20 +254,12 @@ class FileListViewActivity : AppCompatActivity() {
         FileDownloader().onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
-    // When the back button func
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val myIntent = Intent(this, DetailsActivity::class.java)
-        this.startActivity(myIntent)
-        return super.onOptionsItemSelected(item)
-    }
 
-    // Network connection detector
     override fun onResume() {
         super.onResume()
         networkMonitor.register()
     }
 
-    // Network connection detector
     override fun onStop() {
         super.onStop()
         networkMonitor.unregister()

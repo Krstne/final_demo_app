@@ -19,7 +19,6 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.android.synthetic.main.activity_details.*
 import org.json.JSONException
 import org.json.JSONObject
-import android.app.ActionBar
 
 class DetailsActivity : AppCompatActivity() {
 
@@ -33,15 +32,6 @@ class DetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_details)
-
-        supportActionBar?.apply {
-            supportActionBar?.setDisplayShowTitleEnabled(true)
-            title = Html.fromHtml("<font color='#01345A'>DigiPack</font>");
-            supportActionBar?.setDisplayShowHomeEnabled(true)
-            // Shows the logo with the app name
-            //supportActionBar?.setLogo(R.drawable.lightblue_logo)
-            //supportActionBar?.setDisplayUseLogoEnabled(true)
-        }
 
         gsearchIntent = Intent(this, gSearchActivity::class.java)
 
@@ -271,6 +261,7 @@ class DetailsActivity : AppCompatActivity() {
         }
     }
 
+
     /**
      * When the network is unavailable, attempts to retrieve GClass, GDrive data from cache.
      * Then, uses this data to build intents for FileListViewActivity and gClassActivity.
@@ -282,6 +273,7 @@ class DetailsActivity : AppCompatActivity() {
         val cacheManager = CacheUtility()
         val fileData = cacheManager.getStringFromCache( getString(R.string.fileList), this)
         val classData = cacheManager.getStringFromCache(  getString(R.string.classList), this)
+
 
         /**
          * Build Google Drive intent
@@ -312,9 +304,6 @@ class DetailsActivity : AppCompatActivity() {
                 this.startActivity(flintent)
             }
         }
-
-
-
 
             /**
              * Build Google Class intent

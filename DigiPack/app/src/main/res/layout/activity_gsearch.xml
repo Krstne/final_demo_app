@@ -8,6 +8,7 @@
     android:background="@drawable/background"
     tools:context=".gSearchActivity">
 
+
     <TextView
         android:id="@+id/title"
         android:layout_width="242dp"
