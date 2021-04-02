@@ -1,46 +1,33 @@
 package com.example.digipack
 
+
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Environment
+import android.provider.DocumentsContract
+import android.text.Html
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.documentfile.provider.DocumentFile
 import com.android.volley.Request
-import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
 import com.google.gson.Gson
+import kotlinx.android.synthetic.main.activity_details.*
 import kotlinx.android.synthetic.main.activity_file_list_view.*
+import kotlinx.android.synthetic.main.activity_file_list_view.clouds
+import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-
-
-import android.Manifest
-import android.annotation.TargetApi
-import android.app.AlertDialog
-import android.app.DownloadManager
-import android.content.Context
-import android.content.pm.PackageManager
-import android.database.Cursor
-import android.net.ConnectivityManager
-import android.os.Build
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import kotlinx.android.synthetic.main.activity_file_list_view.*
-import kotlinx.android.synthetic.main.activity_main.*
-
-import java.io.File
-
-import java.io.InputStream
-import android.provider.DocumentsContract
-import kotlinx.android.synthetic.main.activity_details.*
-import kotlinx.android.synthetic.main.activity_file_list_view.clouds
+import java.lang.IllegalStateException
 
 
 const val PICK_PDF_FILE = 2
@@ -56,8 +43,16 @@ class FileListViewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_file_list_view)
 
-        var filenames = ArrayList<String>()
-        var fileids = ArrayList<String>()
+        // Change title color
+        supportActionBar?.title = Html.fromHtml("<font color='#01345A'>Files</font>")
+
+        // Get the action button
+        val actionBr = supportActionBar
+        if(actionBr != null){
+            actionBr.setDisplayHomeAsUpEnabled(true)
+        }
+
+    var files = ArrayList<DigiJson.DigiFile>()
         var queue = RequestQueueSingleton.getInstance(this.applicationContext)
         var context: Context = this
 
@@ -65,8 +60,8 @@ class FileListViewActivity : AppCompatActivity() {
         var googleId = intent.getBundleExtra("gsoData")?.getString("google_id")
         email = intent.getBundleExtra("gsoData")?.getString("google_email").toString()
 
-        read_json(filenames, fileids)
-        write_to_ui_and_listen(filenames, fileids, queue)
+        read_json(files)
+        write_to_ui_and_listen(files, queue)
 
         //on refresh:
         //refreshList(queue, email, googleFirstName, googleId)
@@ -83,11 +78,11 @@ class FileListViewActivity : AppCompatActivity() {
                 //but the uri appears to be coming out malformed idk
                 val builder = Uri.Builder()
                 builder.appendEncodedPath(
-                    (Uri.fromFile(
-                        Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS
-                        )
-                    )).toString()
+                        (Uri.fromFile(
+                                Environment.getExternalStoragePublicDirectory(
+                                        Environment.DIRECTORY_DOWNLOADS
+                                )
+                        )).toString()
                 )
                 val uri = builder.build()
                 val file = DocumentFile.fromSingleUri(context, uri)
@@ -117,7 +112,8 @@ class FileListViewActivity : AppCompatActivity() {
                             ConnectionType.Cellular -> {
                                 clouds.setImageResource(R.drawable.sun_connection)
                             }
-                            else -> { }
+                            else -> {
+                            }
                         }
                     }
                     false -> {
@@ -150,67 +146,61 @@ class FileListViewActivity : AppCompatActivity() {
     }
 
     // Read the json file and the display it on the activity layout
-    fun read_json(filenames: ArrayList<String>, fileids: ArrayList<String>){
+    fun read_json(files: ArrayList<DigiJson.DigiFile>){
+        var json : String? = intent.getStringExtra("fileListJson")
 
         try {
-            //goat.jpeg
-            //lion.png
-            //Caitlin Abuel Resume.pdf
-
             // Read the text file
-
-            var json : String? = intent.getStringExtra("fileListJson")
             var gsodata = intent.getBundleExtra("gsoData")
-            //email = gsodata?.getString("google_email")
-
-            // Prints the Json File
-            //json_info.text = json
+            //do some flips to get to the actual json object
             var jsonobj = JSONObject(json)
             Log.i(getString(R.string.app_name), "filelistview jsonobj: %s".format(jsonobj.toString()))
-
             // Creates an JSON array which will contain data from our Json file
             var jsonArray = JSONArray(jsonobj.getString("Files"))
             Log.i(getString(R.string.app_name), "filelistview jsonArray: %s".format(jsonArray.toString()))
-            //Log.i(getString(R.string.app_name), "Json Array: %s".format(internalJsonobj.toString()))
 
-            //var jsonArray = JSONArray(internalJsonobj)
-            Log.i(getString(R.string.app_name), "just before the fore loop")
-            // Loop through the json array
-
-            for (i in 0..(jsonArray.length() - 1)){
-                // Create a json object to access each value in the file
-                var jsonObj =  jsonArray.getJSONObject(i)
-
-                // Array to store the jsonObject
-                filenames.add(jsonObj.getString("fileName"))
-                fileids.add(jsonObj.getString("fileid"))
+            for( i in 0..jsonArray.length() - 1){
+                files.add( Gson().fromJson(jsonArray.getJSONObject(i).toString(), DigiJson.DigiFile::class.java) )
             }
-        }catch (e : IOException){
+
+            Log.i(getString(R.string.app_name), "gson?: $files")
+        }catch (e: IOException){
             //handle errors eventually
             Log.e(getString(R.string.app_name), "error: %s".format(e.toString()))
+        }catch( e: IllegalStateException){
+            Log.e(getString(R.string.app_name), "FLVA err, gson didnt like something: ${e.toString()}")
         }
-
     }
 
-    fun write_to_ui_and_listen(fileNames: ArrayList<String>, fileids: ArrayList<String>, queue: RequestQueueSingleton)
+    fun write_to_ui_and_listen(files: ArrayList<DigiJson.DigiFile>, queue: RequestQueueSingleton)
     {
         try{
-            var adapterView = ArrayAdapter(this, android.R.layout.simple_list_item_1, fileNames)
+            var filenamelist = ArrayList<String>()
+            for(i in files){
+                when{
+                    i.fileName == null ->{
+                        filenamelist.add("<no file name found>")
+                    }
+                    else -> {
+                        i.fileName?.let { filenamelist.add(it) }
+                    }
+                }
+
+            }
+            var adapterView = ArrayAdapter(this, android.R.layout.simple_list_item_1, filenamelist)
 
             json_info.adapter = adapterView
 
             // Creates an onclick listener when the user clicks on the driveID that would be referenced to driveID
-            json_info.onItemClickListener = AdapterView.OnItemClickListener{
-                    parent, view, position, id->
+            json_info.onItemClickListener = AdapterView.OnItemClickListener{ parent, view, position, id->
                 //position is the index of the list item that corresponds to the button clicked
-                Toast.makeText(applicationContext, "Type Selected is" + fileNames[position],Toast.LENGTH_LONG).show()
-                url = getString(R.string.serverUrl).plus("download/${fileNames[position]}")
+                //Toast.makeText(applicationContext, "Type Selected is" + files[position], Toast.LENGTH_LONG).show()
+                url = getString(R.string.serverUrl).plus("download/${files[position].fileid}")
                 //url should not be global in prod
                 //should be created dynamically for the task at hand
-                getfile(queue, email, "mynamejef", fileids[position], "alsoyef")
                 FileDownloader().getFile(this, url)
             }
-        }catch(e: IOException){
+        }catch (e: IOException){
             //handle errors eventually
             Log.e(getString(R.string.app_name), "FileListViewActivity write_to_ui error: %s".format(e.toString()))
         }
@@ -219,39 +209,41 @@ class FileListViewActivity : AppCompatActivity() {
     fun getfile(queue: RequestQueueSingleton, googleEmail: String?, googleFirstName: String?, fileid: String?, googleId: String?): Boolean {
         val reqMethodCode = Request.Method.GET
         val getFileUrl = getString(R.string.serverUrl).plus("sd/${googleEmail}/${fileid}")
-        val request = JSONObject(Gson().toJson(Jsuser(googleFirstName, googleEmail, googleId)))
+        val request = JSONObject(Gson().toJson(DigiJson.Jsuser(googleFirstName, googleEmail, googleId)))
 
         var flag : Boolean = false
 
         val req = JsonObjectRequest(reqMethodCode, getFileUrl, request,
-            { resp ->
-                //do something response
-                flag = true
-            },
-            { err ->
-                //so something err
-                flag = false
-            }
+                { resp ->
+                    //do something response
+                    flag = true
+                },
+                { err ->
+                    //so something err
+                    flag = false
+                }
         )
         queue.addToRequestQueue(req)
         return flag
     }
 
     // Refresh the page
-    fun refreshList(queue: RequestQueueSingleton, googleEmail: String?, googleFirstName: String?, googleId: String? ){
+    fun refreshList(queue: RequestQueueSingleton, googleEmail: String?, googleFirstName: String?, googleId: String?){
         val reqMethodCode = Request.Method.GET
         val getFileUrl = getString(R.string.serverUrl).plus("user/").plus(googleEmail)
 
-        val request = JSONObject(Gson().toJson(Jsuser(googleFirstName, googleEmail, googleId)))
+        val request = JSONObject(Gson().toJson(DigiJson.Jsuser(googleFirstName, googleEmail, googleId)))
         val req = JsonObjectRequest(reqMethodCode, getFileUrl, request,
-            { resp -> intent.removeExtra("fileListJson")
-                intent.putExtra("fileListJson", resp.toString())
-                //do something with a positive response
-            },
-            { err -> println("fdas")
-                Log.e(getString(R.string.app_name), "FileListViewActivity refeshList error: %s".format(err.toString()))
-                //do something with an error
-            }
+                { resp ->
+                    intent.removeExtra("fileListJson")
+                    intent.putExtra("fileListJson", resp.toString())
+                    //do something with a positive response
+                },
+                { err ->
+                    println("fdas")
+                    Log.e(getString(R.string.app_name), "FileListViewActivity refeshList error: %s".format(err.toString()))
+                    //do something with an error
+                }
         )
         queue.addToRequestQueue(req)
     }
@@ -261,12 +253,20 @@ class FileListViewActivity : AppCompatActivity() {
         FileDownloader().onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
+    // When the back button func
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val myIntent = Intent(this, DetailsActivity::class.java)
+        this.startActivity(myIntent)
+        return super.onOptionsItemSelected(item)
+    }
 
+    // Network connection detector
     override fun onResume() {
         super.onResume()
         networkMonitor.register()
     }
 
+    // Network connection detector
     override fun onStop() {
         super.onStop()
         networkMonitor.unregister()

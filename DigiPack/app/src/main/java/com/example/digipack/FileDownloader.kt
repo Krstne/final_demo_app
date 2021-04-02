@@ -135,6 +135,9 @@ class FileDownloader {
         val downloadId = downloadManager.enqueue(request)
         val query = DownloadManager.Query().setFilterById(downloadId)
 
+        /**
+         * removing this cause its not needed, we just display the download in the notification
+         * might be useful for the download status thing in the future but for now we dont need it
         Thread(Runnable {
             var downloading = true
             while (downloading) {
@@ -156,6 +159,8 @@ class FileDownloader {
                 cursor.close()
             }
         }).start()
+
+        **/
     }
 
     private fun statusMessage(url: String, directory: File, status: Int): String {

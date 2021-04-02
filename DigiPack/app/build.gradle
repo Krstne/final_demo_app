@@ -58,4 +58,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:1.5.2")
 
     implementation 'com.android.support:multidex:1.0.3'
+
+    //upload manager
+    implementation("com.squareup.okhttp3:okhttp:4.7.2")
 }
