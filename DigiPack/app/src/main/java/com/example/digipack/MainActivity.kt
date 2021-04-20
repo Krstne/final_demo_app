@@ -1,5 +1,6 @@
 package com.example.digipack
 
+import DigiJson.GUserJson.GUser
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -14,69 +15,121 @@ import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
 import kotlinx.android.synthetic.main.activity_main.*
 
+//results codes
+private const val RC_SIGN_IN = 100
+private const val EXPLICIT_SIGN_IN = 201
+private const val IMPLICIT_SIGN_IN = 202
+
+
 class MainActivity : AppCompatActivity() {
 
     lateinit var mGoogleSignInClient: GoogleSignInClient
-    private val RC_SIGN_IN = 100
+    private val networkMonitor = networkDetectorTool(this)
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        //get the account the user signed in with
-        val account = GoogleSignIn.getLastSignedInAccount(this)
 
-        //if the user already signed in
-        if(account != null )
-        {
-            //extract profile information, ID token
-            val googleEmail = account.email
-            val googleFirstName = account.givenName
-            val googleLastName = account.familyName
-            val googleProfilePicURL = account.photoUrl
-            val googleIdToken = account.idToken
-            val googleId = account.id
+        // Calls the network detector class
+        networkMonitor.result = { isAvailable, type ->
+            runOnUiThread {
+                when (isAvailable) {
+                    true -> {
+                        when (type) {
+                            //changed this to only call the server once since we dont care what type
+                            //of connection is happening currently
+                            ConnectionType.Wifi, ConnectionType.Cellular -> {
+                                //case internet available
+                                //initialize google sign in object
+                                val gso =
+                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestEmail()
+                                        .requestIdToken(getString(R.string.serverClientId))
+                                        .requestScopes(
+                                            Scope(Scopes.DRIVE_FULL),
+                                            Scope("https://www.googleapis.com/auth/classroom.courses"),
+                                            Scope("https://www.googleapis.com/auth/classroom.coursework.me"),
+                                            Scope("https://www.googleapis.com/auth/classroom.announcements"),
+                                            Scope("https://www.googleapis.com/auth/classroom.guardianlinks.me.readonly")
+                                        )
+                                        .requestServerAuthCode(getString(R.string.serverClientId))
+                                        .build()
 
-            //construct and start intent for Details activity
-            val myIntent = Intent(this, DetailsActivity::class.java)
-            myIntent.putExtra("google_id", googleId)
-            myIntent.putExtra("google_first_name", googleFirstName)
-            myIntent.putExtra("google_last_name", googleLastName)
-            myIntent.putExtra("google_email", googleEmail)
-            myIntent.putExtra("google_profile_pic_url", googleProfilePicURL)
-            myIntent.putExtra("google_auth_code", googleIdToken)
-            myIntent.putExtra("firstSignIn", false)
+                                mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
-            this.startActivity(myIntent)
-        }
-        //else user isnt signed in
+                                //silent sign in operation gets new id token
+                                mGoogleSignInClient.silentSignIn()
+                                    .addOnCompleteListener(this) { task ->
+                                        handleSignInResult(task, IMPLICIT_SIGN_IN)
+                                    }
 
-        //initialize google sign in object
-        val gso =
-                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestEmail()
-                        .requestIdToken( getString(R.string.serverClientId) )
-                        .requestScopes( Scope (Scopes.DRIVE_FULL),
-                                Scope ("https://www.googleapis.com/auth/classroom.courses"),
-                                Scope ("https://www.googleapis.com/auth/classroom.coursework.me"),
-                                Scope ("https://www.googleapis.com/auth/classroom.announcements"),
-                                Scope ("https://www.googleapis.com/auth/classroom.guardianlinks.me.readonly") )
-                        .requestServerAuthCode( getString(R.string.serverClientId), true)
-                        .build()
+                                //after silent sign in attempted, activiate the button
+                                google_sign_in_button.setOnClickListener {
+                                    signIn()
+                                }
+                            }
 
-        mGoogleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        google_sign_in_button.setOnClickListener {
-            signIn()
+                            else -> {
+                            }
+                        }
+                    }
+                    false -> {
+                        //case no internet
+                        //get last signed in
+                        val userAccount = GoogleSignIn.getLastSignedInAccount(this)
+                        // Signed in successfully, extract progile information
+                        val googleId = userAccount?.id ?: ""
+                        Log.i("Google ID", googleId)
+
+                        val googleFirstName = userAccount?.givenName ?: ""
+                        Log.i("Google First Name", googleFirstName)
+
+                        val googleLastName = userAccount?.familyName ?: ""
+                        Log.i("Google Last Name", googleLastName)
+
+                        val googleEmail = userAccount?.email ?: ""
+                        Log.i("Google Email", googleEmail)
+
+                        val idToken = userAccount?.idToken ?: ""
+                        Log.i("Google ID Token", idToken)
+                        println("Google idToken " + idToken)
+
+                        val authCode = userAccount?.serverAuthCode ?: "" //auth code used for registration with server
+                        Log.i("Google Auth Code", authCode)
+
+                        // construct and launch an intent for DetailsActivity
+                        val myIntent = Intent(this, change_ui_activity::class.java)
+                        val guser = GUser(
+                            googleId,
+                            googleFirstName,
+                            googleLastName,
+                            googleEmail,
+                            authCode,
+                            idToken
+                        )
+                        myIntent.putExtra("guser", guser)
+
+                        myIntent.putExtra("firstSignIn", IMPLICIT_SIGN_IN)
+
+                        this.startActivity(myIntent)
+                    }
+                }
+            }
         }
     }
 
 
-    //sign in function for the google sign in button
+
+
+
+        //sign in function for the google sign in button
     private fun signIn() {
         val userSignInIntent = mGoogleSignInClient.signInIntent
         startActivityForResult(
-                userSignInIntent, RC_SIGN_IN //Passes result to onActivityResult
+            userSignInIntent, RC_SIGN_IN //Passes result to onActivityResult
         )
     }
 
@@ -88,19 +141,22 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == RC_SIGN_IN) {
             val task =
                     GoogleSignIn.getSignedInAccountFromIntent(data)
-            handleSignInResult(task) //passes task to handleSignInResult
+            handleSignInResult(task, EXPLICIT_SIGN_IN) //passes task to handleSignInResult
         }
     }
 
     // The user is signed in successfully and will get the user's basic info
-    private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
+    private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>, resultCode: Int) {
         try {
+            println("handle sign in entered")
             val userAccount = completedTask.getResult(
-                    ApiException::class.java
+                ApiException::class.java
             )
+            println("user account value obtained")
+
             // Signed in successfully, extract progile information
             val googleId = userAccount?.id ?: ""
-            Log.i("Google ID",googleId)
+            Log.i("Google ID", googleId)
 
             val googleFirstName = userAccount?.givenName ?: ""
             Log.i("Google First Name", googleFirstName)
@@ -111,30 +167,48 @@ class MainActivity : AppCompatActivity() {
             val googleEmail = userAccount?.email ?: ""
             Log.i("Google Email", googleEmail)
 
-            val googleProfilePicURL = userAccount?.photoUrl.toString()
-            Log.i("Google Profile Pic URL", googleProfilePicURL)
+            val idToken = userAccount?.idToken ?: ""
+            Log.i("Google ID Token", idToken)
+            println("Google idToken " + idToken)
 
-            val googleIdToken = userAccount?.idToken ?: ""
-            Log.i("Google ID Token", googleIdToken)
-
-            val googleAuthCode = userAccount?.serverAuthCode ?: "" //auth code used for registration with server
-            println(googleAuthCode)
+            val authCode = userAccount?.serverAuthCode ?: "" //auth code used for registration with server
+            Log.i("Google Auth Code", authCode)
 
             // construct and launch an intent for DetailsActivity
-            val myIntent = Intent(this, DetailsActivity::class.java)
-            myIntent.putExtra("google_id", googleId)
-            myIntent.putExtra("google_first_name", googleFirstName)
-            myIntent.putExtra("google_last_name", googleLastName)
-            myIntent.putExtra("google_email", googleEmail)
-            myIntent.putExtra("google_profile_pic_url", googleProfilePicURL)
-            myIntent.putExtra("google_auth_code", googleAuthCode)
-            myIntent.putExtra("firstSignIn", true)
+            val myIntent = Intent(this, change_ui_activity::class.java)
+            val guser = GUser(
+                googleId,
+                googleFirstName,
+                googleLastName,
+                googleEmail,
+                authCode,
+                idToken
+            )
+            myIntent.putExtra("guser", guser)
+
+            myIntent.putExtra("firstSignIn", resultCode == EXPLICIT_SIGN_IN)
+
             this.startActivity(myIntent)
+
         } catch (e: ApiException) {
             // Checks if the sign in is unsuccessful, if not then throws an error code
             Log.e(
-                    "failed code=", e.statusCode.toString()
+                "failed code=", e.statusCode.toString()
             )
         }
     }
+
+
+    // Network connection detector
+    override fun onResume() {
+        super.onResume()
+        networkMonitor.register()
+    }
+
+    // Network connection detector
+    override fun onStop() {
+        super.onStop()
+        networkMonitor.unregister()
+    }
+
 }

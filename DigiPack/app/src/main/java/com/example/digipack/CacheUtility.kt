@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
@@ -52,6 +53,7 @@ class CacheUtility {
             val digiPackDirectory = File(path, "DigiPack")
             digiPackDirectory.mkdir()
 
+            print("cacheString says directory is " + digiPackDirectory.toString())
             //create file, write content to file
             val file = File(digiPackDirectory, fileName)
 
@@ -82,24 +84,26 @@ class CacheUtility {
             //access digipack directory
             val digiPackDirectory = File(context.getExternalFilesDir(null), "DigiPack")
             digiPackDirectory.mkdir()  //make directory if it doesn't exist
+            var file : File
 
-            try {
+            if( File(digiPackDirectory, fileName).exists() ){
                 //load file with specified name
-                val file = File(digiPackDirectory, fileName)
-
-
-                //return file contents as a string
-                return file.readText()
-            } catch (e: FileNotFoundException) {
-                //file does not exist. return empty string
-                e.printStackTrace()
-                return ""
-
+                file = File(digiPackDirectory, fileName)
+            }else{
+                //file does not exist
+                //create file
+                try{
+                    val create = File(digiPackDirectory, fileName).createNewFile()
+                    file = File(digiPackDirectory, fileName)
+                }catch (e: FileNotFoundException){
+                    Log.e(context.getString(R.string.app_name), e.toString())
+                    return ""
+                }
 
             }
+            return file.readText()
         }
         return ""
-
     }
 
     /**

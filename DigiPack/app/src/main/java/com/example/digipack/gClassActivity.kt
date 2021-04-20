@@ -1,73 +1,68 @@
 package com.example.digipack
 
+import DigiJson.DigiClass
+import DigiJson.GUserJson.GUser
 import android.content.Intent
 import android.os.Bundle
 import android.text.Html
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.google.gson.annotations.SerializedName
+import com.google.gson.Gson
+import kotlinx.android.synthetic.main.activity_file_list_view.*
 import kotlinx.android.synthetic.main.activity_gclass.*
-import org.json.JSONArray
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import java.io.IOException
+import java.lang.Exception
 
 class gClassActivity : AppCompatActivity(){
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_gclass)
+
+        // Determines what UI to show to the user
+        val ui = intent.getBooleanExtra("ui", false)
+        if(ui){
+            setContentView(R.layout.activity_kid_glcass)
+        }else{
+            setContentView(R.layout.activity_gclass)
+        }
 
         // Change title
         supportActionBar?.title = Html.fromHtml("<font color='#01345A'>Classroom</font>")
 
-        var classnames = ArrayList<String>()
-        var classids = ArrayList<String>()
-        var announcements = ArrayList<String>()
-        var coursework = ArrayList<String>()
-
-
-        var gso = intent.getBundleExtra("gsoData")
-        var classlist = intent.getStringExtra("classJson")
+        var guser = intent.getSerializableExtra("guser") as GUser
+        var classlist = intent.getSerializableExtra("courselist") as DigiClass.CourseList
 
         println("GCLASS SAYS CLASSLIST IS : " + classlist.toString())
 
-        read_json(classnames, classids)
-        write_to_ui_and_listen(classnames, classids)
-    }
-
-    fun read_json(classnames: ArrayList<String>, classids:ArrayList<String>){
-        try{
-            var classtr : String? = intent.getStringExtra("classJson")
-            var json = JSONObject(classtr)
-            Log.i(getString(R.string.app_name), "gclassactivity json: %s".format(json.toString()))
-
-            var coursearray = JSONArray(json.getString("Courses"))
-
-            for(i in 0..(coursearray.length()-1)){
-                var job = coursearray.getJSONObject(i)
-
-                classnames.add(job.getString("name"))
-                classids.add(job.getString("courseID"))
-            }
-
-        }catch(e: IOException){
-            Log.e(getString(R.string.app_name), "error: %s".format(e.toString()))
+        var courselist = classlist.Courses
+        if(courselist != null){
+            write_to_ui_and_listen(guser, ui, courselist)
         }
     }
 
-    fun write_to_ui_and_listen(classnames: ArrayList<String>, classids:ArrayList<String>){
+    fun write_to_ui_and_listen(guser: GUser, ui: Boolean ,cl: ArrayList<DigiClass.Course>){
         try{
-            var adapterView = ArrayAdapter(this, android.R.layout.simple_list_item_1, classnames)
-            class_names.adapter = adapterView
+            var courseDetails = Intent(this, courseDetailsActivity::class.java)
+            courseDetails.putExtra("guser", guser)
+            var classnames = ArrayList<String>()
+            for( i in cl){
+                i.name?.let { classnames.add(it) }
+            }
 
-            class_names.onItemClickListener = AdapterView.OnItemClickListener{ parent, view, position, id ->
+            var adapterView = ArrayAdapter(this, android.R.layout.simple_list_item_1, classnames)
+            course_names.adapter = adapterView
+
+            course_names.onItemClickListener = AdapterView.OnItemClickListener{ parent, view, position, id ->
                 //Toast.makeText(applicationContext, "${classnames[position]} selected", Toast.LENGTH_LONG).show()
-                var courseDescriptionPage = Intent(this, courseDetailsActivity::class.java)
-                this.startActivity(courseDescriptionPage)
+
+                var course = cl[position]
+                courseDetails.putExtra("course", course)
+                courseDetails.putExtra("ui", ui)
+                this.startActivity(courseDetails)
             }
         }catch(e: IOException) {
             //handle errors eventually
