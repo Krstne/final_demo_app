@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/background"
+    tools:context=".FileListViewActivity">
+
+    <Button
+        android:id="@+id/openFileButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="206dp"
+        android:layout_marginEnd="50dp"
+        android:layout_marginBottom="55dp"
+        android:background="@drawable/button_layout"
+        android:text="Download Folder"
+        android:textColor="@color/nau_blue" />
+
+    <Button
+        android:id="@+id/uploadFileButton"
+        android:layout_width="115dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="63dp"
+        android:layout_marginBottom="58dp"
+        android:background="@drawable/button_layout"
+        android:text="Submit Files"
+        android:textColor="@color/nau_blue" />
+
+    <ListView
+        android:id="@+id/json_info"
+        android:layout_width="415dp"
+        android:layout_height="550dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="2dp"
+        android:choiceMode="singleChoice"
+        android:listSelector="@color/nau_gold" />
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:id="@+id/clouds"
+        android:layout_height="142dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginBottom="8dp" />
+
+</RelativeLayout>
